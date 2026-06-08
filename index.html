@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Data Visualization Browser</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f2ec;
+    --surface: #ffffff;
+    --ink: #1a1612;
+    --ink-muted: #6b6259;
+    --accent: #c94f2a;
+    --accent-light: #f0ddd7;
+    --border: #e0d9d0;
+    --tag-bg: #ede8e1;
+    --tag-active: #c94f2a;
+    --tag-active-text: #fff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  /* Header */
+  header {
+    background: var(--ink);
+    color: #fff;
+    padding: 40px 48px 32px;
+    position: relative;
+    overflow: hidden;
+  }
+  header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 20px,
+      rgba(255,255,255,0.03) 20px,
+      rgba(255,255,255,0.03) 21px
+    );
+  }
+  header h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    position: relative;
+  }
+  header h1 em {
+    color: #e8a090;
+    font-style: italic;
+  }
+  header p {
+    margin-top: 10px;
+    color: rgba(255,255,255,0.6);
+    font-size: 14px;
+    font-weight: 300;
+    position: relative;
+    max-width: 560px;
+  }
+  .header-meta {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 20px;
+    position: relative;
+  }
+  .count-badge {
+    background: var(--accent);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border-radius: 100px;
+  }
+
+  /* Controls */
+  .controls {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 20px 48px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: flex-start;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+  .search-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 200px;
+    max-width: 320px;
+  }
+  .search-wrap svg {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--ink-muted);
+    pointer-events: none;
+  }
+  input[type="search"] {
+    width: 100%;
+    padding: 9px 12px 9px 38px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    font-family: inherit;
+    font-size: 14px;
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input[type="search"]:focus { border-color: var(--accent); }
+
+  .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .filter-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+  }
+  .filter-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .tag {
+    padding: 5px 12px;
+    border-radius: 100px;
+    font-size: 12px;
+    font-weight: 500;
+    background: var(--tag-bg);
+    color: var(--ink-muted);
+    cursor: pointer;
+    border: 1.5px solid transparent;
+    transition: all 0.15s;
+    user-select: none;
+    white-space: nowrap;
+  }
+  .tag:hover { border-color: var(--accent); color: var(--accent); }
+  .tag.active { background: var(--tag-active); color: var(--tag-active-text); border-color: var(--tag-active); }
+
+  .reset-btn {
+    margin-left: auto;
+    align-self: flex-end;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    background: transparent;
+    color: var(--ink-muted);
+    border: 1.5px solid var(--border);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .reset-btn:hover { border-color: var(--ink-muted); color: var(--ink); }
+
+  /* Results bar */
+  .results-bar {
+    padding: 14px 48px;
+    font-size: 13px;
+    color: var(--ink-muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .results-bar strong { color: var(--ink); }
+
+  /* Grid */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+    padding: 0 48px 60px;
+  }
+
+  /* Card */
+  .card {
+    background: var(--surface);
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    transition: transform 0.18s, box-shadow 0.18s;
+    display: flex;
+    flex-direction: column;
+  }
+  .card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 32px rgba(26,22,18,0.12);
+  }
+
+  .card-thumb {
+    width: 100%;
+    aspect-ratio: 16/9;
+    background: var(--tag-bg);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .card-thumb img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+  .card-thumb img.loaded {
+    opacity: 1;
+  }
+  .card-thumb .thumb-placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--tag-bg) 0%, #ddd5ca 100%);
+    color: var(--ink-muted);
+    font-size: 11px;
+    text-align: center;
+    padding: 16px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+  .card-thumb .genre-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: rgba(26,22,18,0.75);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    padding: 3px 9px;
+    border-radius: 100px;
+    backdrop-filter: blur(4px);
+  }
+
+  .card-body {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    gap: 10px;
+  }
+  .card-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 15px;
+    line-height: 1.3;
+    color: var(--ink);
+  }
+  .card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: auto;
+  }
+  .meta-tag {
+    font-size: 11px;
+    padding: 3px 9px;
+    border-radius: 100px;
+    background: var(--accent-light);
+    color: var(--accent);
+    font-weight: 500;
+  }
+  .meta-tag.structure {
+    background: #ddeaf3;
+    color: #2a5c8a;
+  }
+  .meta-tag.narrative {
+    background: #ddf3e4;
+    color: #1f7a40;
+  }
+  .card-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent);
+    text-decoration: none;
+    margin-top: 4px;
+    transition: gap 0.15s;
+  }
+  .card-link:hover { gap: 8px; }
+  .no-url {
+    font-size: 12px;
+    color: var(--ink-muted);
+    font-style: italic;
+    margin-top: 4px;
+  }
+
+  /* Empty state */
+  .empty {
+    grid-column: 1/-1;
+    text-align: center;
+    padding: 80px 24px;
+    color: var(--ink-muted);
+  }
+  .empty h2 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.8rem;
+    margin-bottom: 8px;
+    color: var(--ink);
+  }
+
+  /* Footer */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 24px 48px;
+    font-size: 12px;
+    color: var(--ink-muted);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  @media (max-width: 640px) {
+    header, .controls, .results-bar, .grid, footer { padding-left: 20px; padding-right: 20px; }
+    .grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+    .controls { gap: 12px; }
+  }
+  @media (max-width: 420px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Data Visualization <em>Browser</em></h1>
+  <p>Uma pesquisa interativa de técnicas de visualizações de dados, categorizados por gênero, componentes e estutura narrativa.</p>
+  <div class="header-meta">
+    <span class="count-badge" id="total-badge">100 entries</span>
+  </div>
+</header>
+
+<div class="controls">
+  <div class="search-wrap">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input type="search" id="search" placeholder="Buscar…" autocomplete="off">
+  </div>
+
+  <div class="filter-group">
+    <div class="filter-label">Gênero Principal</div>
+    <div class="filter-tags" id="filter-genre"></div>
+  </div>
+
+  <div class="filter-group">
+    <div class="filter-label">Componentes</div>
+    <div class="filter-tags" id="filter-structure"></div>
+  </div>
+
+  <div class="filter-group">
+    <div class="filter-label">Estrutura Narrativa</div>
+    <div class="filter-tags" id="filter-narrative"></div>
+  </div>
+
+  <button class="reset-btn" id="reset-btn">Limpar filtros</button>
+</div>
+
+<div class="results-bar">
+  <span>Mostrando <strong id="count-shown">—</strong> de <strong id="count-total">—</strong> visualizações</span>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<footer>
+  <span>Data Visualization Browser &mdash; Interactive Survey</span>
+  <span id="footer-date"></span>
+</footer>
+
+<script>
+const DATA = [
+  {"title":"Four Seasons","url":"https://www.go4trees.com/four-seasons/","mainGenre":"Slide Show","otherGenres":"Partitioned Poster","structure":"Multi-component","narrative":"Drill-Down Story"},
+  {"title":"How the Recession Reshaped the Economy, in 255 Charts","url":"https://www.nytimes.com/interactive/2014/06/05/upshot/how-the-recession-reshaped-the-economy-in-255-charts.html","mainGenre":"Slide Show","otherGenres":"Magazine Style","structure":"Multi-component","narrative":"Drill-Down Story"},
+  {"title":"A 3-D View of a Chart That Predicts The Economic Future: The Yield Curve","url":"https://www.nytimes.com/interactive/2015/03/19/upshot/3d-yield-curve-economic-growth.html","mainGenre":"Slide Show","otherGenres":"Annotated Chart","structure":"Multi-component","narrative":"Interactive Slideshow"},
+  {"title":"Apple's Value Hit $1 Trillion","url":"https://www.nytimes.com/interactive/2018/08/02/technology/apple-trillion-market-cap.html","mainGenre":"Slide Show","otherGenres":"Film/Video/Animation","structure":"Multi-component","narrative":"Interactive Slideshow"},
+  {"title":"How Has the Drought Affected California's Water Use?","url":"https://www.nytimes.com/interactive/2015/04/01/us/water-use-in-california.html","mainGenre":"Slide Show","otherGenres":"Magazine Style","structure":"Multi-component","narrative":"Interactive Slideshow"},
+  {"title":"Job turnover by occupation","url":"https://flowingdata.com/2026/04/16/job-turnover-by-occupation/","mainGenre":"Magazine Style","otherGenres":"Annotated Chart","structure":"Multi-component","narrative":"Martini Glass"},
+  {"title":"A genealogia e o perfil dos partidos brasileiros","url":"https://www.nexojornal.com.br/especial/2024/09/25/politica-origem-partidos-brasil-genealogia","mainGenre":"Partitioned Poster","otherGenres":"Flow Chart","structure":"Single-component","narrative":"Martini Glass"},
+  {"title":"ALL OLYMPIC GOLD MEDAL WINNERS","url":"https://olympicfeathers.visualcinnamon.com/","mainGenre":"Partitioned Poster","otherGenres":"Annotated Chart","structure":"Multi-component","narrative":"Drill-Down Story"},
+  {"title":"Casamentos LGBTQIA+ [2013 – 2022]","url":"https://www.generonumero.media/reportagens/casal-mulheres-trabalho-domestico/","mainGenre":"Magazine Style","otherGenres":"Annotated Chart, Slide Show","structure":"Multi-component","narrative":"Martini Glass"},
+  {"title":"COVID Treatments","url":"https://informationisbeautiful.net/visualizations/covid-19-coronavirus-infographic-datapack/","mainGenre":"Slide Show","otherGenres":"Annotated Chart","structure":"Multi-component","narrative":"Interactive Slideshow"},
+  {"title":"Creches e pré-escolas com ensino integral no Rio de Janeiro","url":"https://www.generonumero.media/creches-escolas-municipais-rio/","mainGenre":"Magazine Style","otherGenres":"Slide Show","structure":"Single-component","narrative":"Martini Glass"},
+  {"title":"Figures in the Sky","url":"http://www.datasketch.es/may/code/nadieh/","mainGenre":"Magazine Style","otherGenres":"Slide Show","structure":"Multi-component","narrative":"Martini Glass"},
+  {"title":"Gaza Reduced to 42 Million Tonnes of Rubble. What Will It Take to Rebuild?","url":"https://www.bloomberg.com/graphics/2024-gaza-who-will-pay-to-rebuild/?srnd=graphics-v2","mainGenre":"Magazine Style","otherGenres":"Film/Video/Animation, Annotated Chart, Slide Show","structure":"Multi-component","narrative":"Martini Glass"},
+  {"title":"How are suicide rates estimated in places lacking reported data","url":"https://ourworldindata.org/suicide","mainGenre":"Magazine Style","otherGenres":"Flow Chart, Annotated Chart","structure":"Multi-component","narrative":"Martini Glass"},
+  {"title":"How Did The World Population Change?","url":"https://www.gapminder.org/answers/how-did-the-world-population-change/","mainGenre":"Film/Video/Animation","otherGenres":"Slide Show","structure":"Multi-component","narrative":"Interactive Slideshow"},
+  {"title":"How do countries on average compare to the other Income Levels across 31 metrics?","url":"https://www.gapminder.org/tools/#$chart-type=bubbles","mainGenre":"Partitioned Poster","otherGenres":"Annotated Chart, Slide Show","structure":"Multi-component","narrative":"Drill-Down Story"},
+  {"title":"How Does Income Relate to Life Expectancy?","url":"https://www.gapminder.org/answers/how-does-income-relate-to-life-expectancy/","mainGenre":"Film/Video/Animation","otherGenres":"Slide Show","structure":"Multi-component","narrative":"Interactive Slideshow"},
+  {"title":"Less than 4% of the world's population are international migrants","url":"https://ourworldindata.org/migration","mainGenre":"Magazine Style","otherGenres":"Annotated Chart, Slide Show","structure":"Multi-component","narrative":"Martini Glass"},
+  {"title":"Mapping the Coronavirus Outbreak Across the World","url":"https://www.bloomberg.com/graphics/2020-coronavirus-cases-world-map/","mainGenre":"Magazine Style","otherGenres":"Annotated Chart, Slide Show","structure":"Multi-component","narrative":"Martini Glass"},
+  {"title":"Mountains Out of Molehills","url":"https://informationisbeautiful.net/visualizations/mountains-out-of-molehills/","mainGenre":"Slide Show","otherGenres":"Annotated Chart","structure":"Multi-component","narrative":"Drill-Down Story"},
+  {"title":"My Life in Vacations","url":"https://vacations.visualcinnamon.com/","mainGenre":"Partitioned Poster","otherGenres":"Annotated Chart","structure":"Multi-component","narrative":"Drill-Down Story"},
+  {"title":"Putting Emojis on the President's Face","url":"https://sxywu.github.io/obamas/","mainGenre":"Slide Show","otherGenres":"Annotated Chart, Film/Video/Animation","structure":"Multi-component","narrative":"Interactive Slideshow"},
+  {"title":"Relação entre pessoas do mesmo sexo ainda é crime em 64 países","url":"https://www.nexojornal.com.br/grafico/2024/06/04/paises-em-que-a-homossexualidade-e-crime-criminalizacao-de-relacoes-homossexuais","mainGenre":"Magazine Style","otherGenres":"Annotated Chart","structure":"Multi-component","narrative":"Martini Glass"},
+  {"title":"Smoking was a major driver of cancer in the 20th century","url":"https://ourworldindata.org/cancer","mainGenre":"Magazine Style","otherGenres":"Annotated Chart, Slide Show","structure":"Multi-component","narrative":"Martini Glass"},
+  {"title":"The Best and Worst Places to Grow Up: How Your Area Compares","url":"https://www.nytimes.com/interactive/2015/05/03/upshot/the-best-and-worst-places-to-grow-up-how-your-area-compares.html","mainGenre":"Magazine Style","otherGenres":"Slide Show","structure":"Multi-component","narrative":"Martini Glass"},
+  {"title":"What is the Most Successful Hollywood Movie of All Time?","url":"https://informationisbeautiful.net/visualizations/what-is-the-most-successful-hollywood-movie-of-all-time/","mainGenre":"Slide Show","otherGenres":"Annotated Chart","structure":"Multi-component","narrative":"Martini Glass"},
+  {"title":"What's Really Warming the World?","url":"https://www.bloomberg.com/graphics/2015-whats-warming-the-world/","mainGenre":"Slide Show","otherGenres":"Magazine Style, Annotated Chart","structure":"Multi-component","narrative":"Martini Glass"},
+  {"title":"Where Athletes in the Premier League Come From","url":"https://www.nytimes.com/interactive/2017/12/29/upshot/internationalization-of-pro-sports-leagues-premier-league.html#wfn-england-premier-league","mainGenre":"Magazine Style","otherGenres":"Annotated Chart","structure":"Multi-component","narrative":"Martini Glass"},
+  {"title":"Where We Came From and Where We Went, State by State","url":"https://www.nytimes.com/interactive/2014/08/13/upshot/where-people-in-each-state-were-born.html","mainGenre":"Magazine Style","otherGenres":"Annotated Chart","structure":"Multi-component","narrative":"Martini Glass"},
+  {"title":"Which is The Best Performing Marvel Movie?","url":"https://informationisbeautiful.net/visualizations/which-is-the-best-performing-marvel-movie/","mainGenre":"Slide Show","otherGenres":"Annotated Chart","structure":"Multi-component","narrative":"Drill-Down Story"},
+  {"title":"Population Growth","url":"https://ourworldindata.org/population-growth","mainGenre":"Magazine Style","otherGenres":"Annotated Chart, Slide Show","structure":"Multi-component","narrative":"Martini Glass"},
+  {"title":"Women have led many countries, but most political leaders are still men","url":"https://ourworldindata.org/women-political-advances#women-have-led-many-countries-but-most-political-leaders-are-still-men","mainGenre":"Magazine Style","otherGenres":"Annotated Chart, Slide Show","structure":"Multi-component","narrative":"Martini Glass"},
+  {"title":"World's Biggest Data Breaches & Hacks","url":"https://informationisbeautiful.net/visualizations/worlds-biggest-data-breaches-hacks/","mainGenre":"Slide Show","otherGenres":"Annotated Chart","structure":"Multi-component","narrative":"Drill-Down Story"},
+  {"title":"The Spanish flu: the global impact of the largest influenza pandemic in history","url":"https://ourworldindata.org/spanish-flu-largest-influenza-pandemic-in-history","mainGenre":"Magazine Style","otherGenres":"Annotated Chart, Slide Show","structure":"Multi-component","narrative":"Martini Glass"},
+  {"title":"Share of the population using the Internet","url":"https://ourworldindata.org/grapher/share-of-individuals-using-the-internet?tab=line","mainGenre":"Slide Show","otherGenres":"Annotated Chart","structure":"Multi-component","narrative":"Drill-Down Story"},
+  {"title":"Median age","url":"https://ourworldindata.org/explorers/population-and-demography?country=~OWID_WRL&indicator=Median+age&Sex=Both+sexes&Age=None&Projection+scenario=Medium","mainGenre":"Slide Show","otherGenres":"Annotated Chart","structure":"Multi-component","narrative":"Drill-Down Story"},
+  {"title":"Share of population living in extreme poverty, 2025","url":"https://ourworldindata.org/grapher/share-of-population-in-extreme-poverty","mainGenre":"Slide Show","otherGenres":"Annotated Chart","structure":"Multi-component","narrative":"Drill-Down Story"},
+  {"title":"The United States of Abortion","url":"https://pudding.cool/2024/10/abortion-mazes/","mainGenre":"Slide Show","otherGenres":"","structure":"Multi-component","narrative":"Martini Glass"},
+  {"title":"Distribution of population between different poverty lines, World","url":"https://ourworldindata.org/grapher/distribution-of-population-between-different-poverty-lines-more-thresholds","mainGenre":"Slide Show","otherGenres":"Annotated Chart","structure":"Multi-component","narrative":"Drill-Down Story"},
+  {"title":"Aviation's share of global CO₂ emissions","url":"https://ourworldindata.org/grapher/aviation-share-co2#sources-and-processing","mainGenre":"Slide Show","otherGenres":"Annotated Chart","structure":"Multi-component","narrative":"Drill-Down Story"},
+  {"title":"Day of the year with peak cherry tree blossom in Kyoto, Japan","url":"https://ourworldindata.org/grapher/date-of-the-peak-cherry-tree-blossom-in-kyoto","mainGenre":"Slide Show","otherGenres":"Annotated Chart","structure":"Multi-component","narrative":"Drill-Down Story"},
+  {"title":"Decadal temperature anomalies","url":"https://ourworldindata.org/grapher/decadal-temperature-anomaly","mainGenre":"Slide Show","otherGenres":"Annotated Chart","structure":"Multi-component","narrative":"Drill-Down Story"},
+  {"title":"Uma questão de fato? A ciência por trás do documentário \"What the Health\" da Netflix","url":"https://informationisbeautiful.net/visualizations/what-the-health-netflix-documentary-fact-checked-debunked/","mainGenre":"Slide Show","otherGenres":"","structure":"Multi-component","narrative":"Drill-Down Story"},
+  {"title":"A Equação de Drake - Quais são as chances de vida extraterrestre?","url":"https://informationisbeautiful.net/visualizations/the-drake-equation/","mainGenre":"Slide Show","otherGenres":"","structure":"Multi-component","narrative":"Drill-Down Story"},
+  {"title":"Os cientistas excêntricos cujas ideias heréticas acabaram por se provar corretas...","url":"https://informationisbeautiful.net/visualizations/mavericks-and-heretics/","mainGenre":"Slide Show","otherGenres":"Annotated Chart","structure":"Multi-component","narrative":"Drill-Down Story"},
+  {"title":"Baseado em uma história verídica? Análise cena a cena de filmes de Hollywood","url":"https://informationisbeautiful.net/visualizations/based-on-a-true-true-story/","mainGenre":"Slide Show","otherGenres":"","structure":"Multi-component","narrative":"Drill-Down Story"},
+  {"title":"Quantos anos você tem? Auge da genialidade","url":"https://informationisbeautiful.net/visualizations/who-old-are-you/","mainGenre":"Slide Show","otherGenres":"Annotated Chart","structure":"Multi-component","narrative":"Drill-Down Story"},
+  {"title":"Common MythConceptions: World's most contagious falsehoods","url":"https://informationisbeautiful.net/visualizations/common-mythconceptions/","mainGenre":"Slide Show","otherGenres":"","structure":"Multi-component","narrative":"Drill-Down Story"},
+  {"title":"Inter Mental: Possible tech-induced cognitive-behavioural disorder","url":"https://informationisbeautiful.net/visualizations/intermental/","mainGenre":"Slide Show","otherGenres":"","structure":"Multi-component","narrative":"Drill-Down Story"},
+  {"title":"Diversidade na área de tecnologia","url":"https://informationisbeautiful.net/visualizations/diversity-in-tech/","mainGenre":"Slide Show","otherGenres":"","structure":"Multi-component","narrative":"Drill-Down Story"},
+  {"title":"O MicrobeScope - Doenças infecciosas em Contexto","url":"https://informationisbeautiful.net/visualizations/the-microbescope-infectious-diseases-in-context/","mainGenre":"Slide Show","otherGenres":"Annotated Chart","structure":"Single-component","narrative":"Drill-Down Story"},
+  {"title":"O MAIS CANÇÕES ATEMPORAIS DE TODOS OS TEMPOS","url":"https://pudding.cool/2017/03/timeless/","mainGenre":"Magazine Style","otherGenres":"Annotated Chart, Slide Show","structure":"Multi-component","narrative":"Martini Glass"},
+  {"title":"The History of the Prada Group Over the Years","url":"https://www.pradagroup.com/en/group/history.html","mainGenre":"Slide Show","otherGenres":"Annotated Chart","structure":"Multi-component","narrative":"Drill-Down Story"},
+  {"title":"Mario through the years","url":"https://mario.nintendo.com/history/","mainGenre":"Film/Video/Animation","otherGenres":"Slide Show","structure":"Multi-component","narrative":"Martini Glass"},
+  {"title":"Marvel CINEMATIC NETWORK","url":"https://marvel.ladataviz.com","mainGenre":"Slide Show","otherGenres":"Flow Chart","structure":"Multi-component","narrative":"Drill-Down Story"},
+  {"title":"Marvel Cinematic Universe as a 3-D network","url":"https://graphics.straitstimes.com/STI/STIMEDIA/Interactives/2018/04/marvel-cinematic-universe-whos-who-interactive/index.html","mainGenre":"Slide Show","otherGenres":"Flow Chart","structure":"Multi-component","narrative":"Drill-Down Story"},
+  {"title":"Timeline shows a century of rock history","url":"https://www.concerthotels.com/100-years-of-rock/","mainGenre":"Flow Chart","otherGenres":"Film/Video/Animation","structure":"Single-component","narrative":"Martini Glass"},
+  {"title":"Estimated cumulative excess deaths per 100,000 people during COVID-19","url":"https://ourworldindata.org/explorers/covid?tab=table&Metric=Excess+mortality+%28estimates%29&Interval=Cumulative&Relative+to+population=true&country=USA~BRA~JPN~DEU","mainGenre":"Slide Show","otherGenres":"Annotated Chart","structure":"Single-component","narrative":"Drill-Down Story"},
+  {"title":"Share of the population using safely managed drinking water, 2024","url":"https://ourworldindata.org/explorers/water-and-sanitation?Resource=Drinking+water&Level+of+Use%2FAccess=Safely+managed&Residence=Total&Relative+to+population=Share+of+population&country=IND~USA~KEN~OWID_WRL~BGD~ZAF~CHN","mainGenre":"Slide Show","otherGenres":"Annotated Chart","structure":"Multi-component","narrative":"Drill-Down Story"},
+  {"title":"Exploring Black Male Actors' Careers","url":"https://public.tableau.com/app/profile/johnnie.weathersby.iii/viz/ExploringBlackMaleActorsCareers-DataPlusMovies/BlackMaleActors","mainGenre":"Slide Show","otherGenres":"Annotated Chart","structure":"Multi-component","narrative":"Drill-Down Story"},
+  {"title":"TWITCH GAMES STATISTICS","url":"https://twitchtracker.com/statistics/games","mainGenre":"Partitioned Poster","otherGenres":"Annotated Chart, Slide Show","structure":"Multi-component","narrative":"Drill-Down Story"},
+  {"title":"How hawker signboards tell the story of Singapore","url":"https://www.straitstimes.com/multimedia/graphics/2025/09/singapore-hawker-signs/index.html","mainGenre":"Slide Show","otherGenres":"Film/Video/Animation, Annotated Chart, Magazine Style","structure":"Multi-component","narrative":"Interactive Slideshow"},
+  {"title":"Trump's immigration data dragnet","url":"https://ig.ft.com/us-ice-surveillance/","mainGenre":"Slide Show","otherGenres":"Magazine Style, Film/Video/Animation, Annotated Chart","structure":"Multi-component","narrative":"Interactive Slideshow"},
+  {"title":"Waves of Interest","url":"https://waves-of-interest.truth-and-beauty.net/","mainGenre":"Slide Show","otherGenres":"Film/Video/Animation","structure":"Multi-component","narrative":"Drill-Down Story"},
+  {"title":"Star Wars Unfolded","url":"https://erik.nz/sw/","mainGenre":"Flow Chart","otherGenres":"Slide Show","structure":"Multi-component","narrative":"Drill-Down Story"},
+  {"title":"Artist dashboard - One Direction","url":"https://chartmasters.org/artist/?id=4AK6F7OLvEQ5QYCBNiQWHq","mainGenre":"Partitioned Poster","otherGenres":"Slide Show","structure":"Multi-component","narrative":"Martini Glass"},
+  {"title":"Who killed the world?","url":"https://pudding.cool/2024/07/scifi/","mainGenre":"Slide Show","otherGenres":"Magazine Style, Annotated Chart","structure":"Multi-component","narrative":"Interactive Slideshow"},
+  {"title":"Not My Name","url":"https://vis.csh.ac.at/notmyname/","mainGenre":"Magazine Style","otherGenres":"Slide Show","structure":"Multi-component","narrative":"Martini Glass"},
+  {"title":"National Anthem","url":"https://pudding.cool/2024/02/anthems/","mainGenre":"Slide Show","otherGenres":"","structure":"Single-component","narrative":"Interactive Slideshow"},
+  {"title":"WHEN WOMEN MAKE HEADLINES","url":"https://pudding.cool/2022/02/women-in-headlines/","mainGenre":"Magazine Style","otherGenres":"Slide Show, Annotated Chart","structure":"Multi-component","narrative":"Martini Glass"},
+  {"title":"The Billion Dollar Gram","url":"https://informationisbeautiful.net/visualizations/the-billion-dollar-gram/","mainGenre":"Partitioned Poster","otherGenres":"","structure":"Multi-component","narrative":"Drill-Down Story"},
+  {"title":"Major Large Language Models (LLMs)","url":"https://informationisbeautiful.net/visualizations/the-rise-of-generative-ai-large-language-models-llms-like-chatgpt/","mainGenre":"Magazine Style","otherGenres":"Annotated Chart, Slide Show","structure":"Multi-component","narrative":"Drill-Down Story"},
+  {"title":"Child mortality rate","url":"https://ourworldindata.org/grapher/child-mortality","mainGenre":"Slide Show","otherGenres":"Annotated Chart","structure":"Multi-component","narrative":"Drill-Down Story"},
+  {"title":"Share of men expected to survive to the age of 65","url":"https://ourworldindata.org/grapher/men-survival-to-age-65","mainGenre":"Slide Show","otherGenres":"Annotated Chart","structure":"Multi-component","narrative":"Drill-Down Story"},
+  {"title":"Frustrated Together","url":"https://www.go4trees.com/frustratedtogether/","mainGenre":"Magazine Style","otherGenres":"Annotated Chart, Slide Show","structure":"Multi-component","narrative":"Drill-Down Story"},
+  {"title":"How The Heck Does GPS Work?","url":"https://perthirtysix.com/how-the-heck-does-gps-work","mainGenre":"Magazine Style","otherGenres":"Slide Show","structure":"Multi-component","narrative":"Martini Glass"},
+  {"title":"Awaiting justice: The impact of Hong Kong's national security laws","url":"https://www.reuters.com/graphics/HONGKONG-SECURITY/PROSECUTIONS/lbpgyjlqbpq/","mainGenre":"Slide Show","otherGenres":"Annotated Chart, Magazine Style","structure":"Multi-component","narrative":"Interactive Slideshow"},
+  {"title":"How Russia's invasion transformed one Ukrainian city","url":"https://www.vox.com/c/world-politics/2023/5/10/23630754/russia-ukraine-war-kharkiv-city-transformed","mainGenre":"Magazine Style","otherGenres":"Slide Show","structure":"Multi-component","narrative":"Martini Glass"},
+  {"title":"A Journey Through Infertility","url":"https://pudding.cool/2026/03/ivf/","mainGenre":"Slide Show","otherGenres":"Annotated Chart","structure":"Multi-component","narrative":"Interactive Slideshow"},
+  {"title":"Musical Motifs","url":"https://pudding.cool/2025/12/motifs/","mainGenre":"Magazine Style","otherGenres":"Slide Show, Film/Video/Animation","structure":"Multi-component","narrative":"Martini Glass"},
+  {"title":"Build-a-Voter","url":"https://www.economist.com/interactive/2025-british-politics/build-a-voter","mainGenre":"Magazine Style","otherGenres":"Annotated Chart, Slide Show","structure":"Multi-component","narrative":"Martini Glass"},
+  {"title":"Portraits of Population","url":"https://diagramchasing.fun/2026/portraits-of-population","mainGenre":"Magazine Style","otherGenres":"Film/Video/Animation, Partitioned Poster, Comic Strip, Annotated Chart","structure":"Multi-component","narrative":"Martini Glass"},
+  {"title":"Size of Life","url":"https://neal.fun/size-of-life/","mainGenre":"Slide Show","otherGenres":"","structure":"Multi-component","narrative":"Drill-Down Story"},
+  {"title":"Who's a Better Writer: A.I. or Humans? Take Our Quiz.","url":"https://www.nytimes.com/interactive/2026/03/09/business/ai-writing-quiz.html","mainGenre":"Magazine Style","otherGenres":"","structure":"Single-component","narrative":"Martini Glass"},
+  {"title":"The Pokémon Tree of Life","url":"https://www.straitstimes.com/multimedia/graphics/2026/02/pokemon-tree-of-life/index.html","mainGenre":"Slide Show","otherGenres":"Annotated Chart, Magazine Style","structure":"Multi-component","narrative":"Martini Glass"},
+  {"title":"Searching for Birds","url":"https://searchingforbirds.visualcinnamon.com/","mainGenre":"Magazine Style","otherGenres":"Annotated Chart, Slide Show, Flow Chart","structure":"Multi-component","narrative":"Martini Glass"},
+  {"title":"Trans News Initiative","url":"https://transnewsinitiative.org/","mainGenre":"Slide Show","otherGenres":"","structure":"Multi-component","narrative":"Drill-Down Story"},
+  {"title":"Who earns a higher salary than you and the jobs they work","url":"https://flowingdata.com/2025/12/02/who-makes-a-higher-salary-and-the-jobs-they-work/","mainGenre":"Magazine Style","otherGenres":"Annotated Chart","structure":"Multi-component","narrative":"Martini Glass"},
+  {"title":"The Most Successful Labels in Hip Hop","url":"https://pudding.cool/2017/03/labels/","mainGenre":"Magazine Style","otherGenres":"Slide Show, Annotated Chart, Film/Video/Animation","structure":"Multi-component","narrative":"Martini Glass"},
+  {"title":"Defining Punk","url":"https://pudding.cool/2017/03/punk/","mainGenre":"Magazine Style","otherGenres":"Annotated Chart, Slide Show","structure":"Multi-component","narrative":"Martini Glass"},
+  {"title":"Film Dialogue","url":"https://pudding.cool/2017/03/film-dialogue/","mainGenre":"Magazine Style","otherGenres":"Annotated Chart, Slide Show","structure":"Multi-component","narrative":"Martini Glass"},
+  {"title":"Most Unlikely Comebacks","url":"https://pudding.cool/2017/03/comeback/","mainGenre":"Slide Show","otherGenres":"Annotated Chart, Film/Video/Animation","structure":"Multi-component","narrative":"Martini Glass"},
+  {"title":"Glasper Sampling","url":"https://pudding.cool/2017/03/sampling/","mainGenre":"Slide Show","otherGenres":"Film/Video/Animation","structure":"Multi-component","narrative":"Interactive Slideshow"},
+  {"title":"The Universe of Miles Davis","url":"https://pudding.cool/2017/03/miles/","mainGenre":"Magazine Style","otherGenres":"Annotated Chart","structure":"Multi-component","narrative":"Martini Glass"},
+  {"title":"How far is too far? An analysis of driving times to abortion clinics in the US.","url":"https://pudding.cool/2017/09/clinics/","mainGenre":"Magazine Style","otherGenres":"Slide Show","structure":"Multi-component","narrative":"Martini Glass"},
+  {"title":"NBA Superteams","url":"https://pudding.cool/2017/10/superteams/","mainGenre":"Slide Show","otherGenres":"","structure":"Multi-component","narrative":"Interactive Slideshow"},
+  {"title":"Seeing Earth from Outer Space","url":"https://pudding.cool/2017/10/satellites/","mainGenre":"Slide Show","otherGenres":"Film/Video/Animation","structure":"Multi-component","narrative":"Interactive Slideshow"},
+  {"title":"What Does the Path to Fame Look Like?","url":"https://pudding.cool/2018/10/wiki-breakout/","mainGenre":"Slide Show","otherGenres":"","structure":"Multi-component","narrative":"Interactive Slideshow"},
+  {"title":"Prices for these grocery items have spiked highest since the war began","url":"https://www.washingtonpost.com/business/2026/05/12/prices-these-grocery-items-have-spiked-highest-since-war-began/","mainGenre":"Magazine Style","otherGenres":"Annotated Chart, Slide Show","structure":"Multi-component","narrative":"Martini Glass"},
+  {"title":"Why young and old men are leaving the labor force at record rates","url":"https://www.washingtonpost.com/business/2026/05/08/men-labor-force-drop-outs/","mainGenre":"Magazine Style","otherGenres":"Annotated Chart, Slide Show","structure":"Multi-component","narrative":"Martini Glass"},
+  {"title":"Occupations with the highest divorce rates","url":"https://flowingdata.com/2026/05/07/divorce-and-occupation-2026/","mainGenre":"Magazine Style","otherGenres":"Annotated Chart","structure":"Multi-component","narrative":"Martini Glass"},
+  {"title":"The Impact of AI-Generated Text on the Internet","url":"https://ai-on-the-internet.github.io","mainGenre":"Magazine Style","otherGenres":"Annotated Chart, Slide Show","structure":"Multi-component","narrative":"Martini Glass"},
+  {"title":"Work Cohorts","url":"https://flowingdata.com/2025/01/27/work-cohorts/","mainGenre":"Magazine Style","otherGenres":"Annotated Chart","structure":"Single-component","narrative":"Martini Glass"},
+  {"title":"When You Will Die","url":"https://flowingdata.com/projects/2025/when-die/","mainGenre":"Magazine Style","otherGenres":"Annotated Chart, Slide Show","structure":"Multi-component","narrative":"Martini Glass"},
+  {"title":"Race and Occupation","url":"https://flowingdata.com/2024/02/16/race-and-occupation/","mainGenre":"Magazine Style","otherGenres":"Annotated Chart, Slide Show","structure":"Multi-component","narrative":"Martini Glass"},
+  {"title":"How long Americans work the same job","url":"https://flowingdata.com/2026/03/26/job-tenure/","mainGenre":"Magazine Style","otherGenres":"Annotated Chart, Slide Show","structure":"Multi-component","narrative":"Martini Glass"},
+  {"title":"Gender Pay Gap","url":"https://informationisbeautiful.net/visualizations/gender-pay-gap/","mainGenre":"Slide Show","otherGenres":"Annotated Chart","structure":"Multi-component","narrative":"Drill-Down Story"},
+  {"title":"ASCII characters are not pixels: a deep dive into ASCII rendering","url":"https://alexharri.com/blog/ascii-rendering","mainGenre":"Magazine Style","otherGenres":"Slide Show","structure":"Multi-component","narrative":"Martini Glass"},
+  {"title":"Why do cats & dogs ...?","url":"https://whydocatsanddogs.visualcinnamon.com/cats","mainGenre":"Magazine Style","otherGenres":"Annotated Chart, Flow Chart","structure":"Multi-component","narrative":"Martini Glass"},
+  {"title":"Money, Muscles, and Anxiety","url":"https://www.theguardian.com/technology/ng-interactive/2025/oct/21/why-the-manosphere-clicked-for-young-men-a-visual-deep-dive","mainGenre":"Slide Show","otherGenres":"Film/Video/Animation","structure":"Multi-component","narrative":"Interactive Slideshow"},
+  {"title":"Climate Zones","url":"https://pudding.cool/2024/06/climate-zones/","mainGenre":"Slide Show","otherGenres":"","structure":"Multi-component","narrative":"Martini Glass"},
+  {"title":"Love Songs","url":"https://pudding.cool/2024/11/love-songs/","mainGenre":"Slide Show","otherGenres":"Annotated Chart","structure":"Multi-component","narrative":"Interactive Slideshow"}
+];
+
+//State 
+const state = { search: '', genre: '', structure: '', narrative: '' };
+
+//filter options
+function unique(key) {
+  return [...new Set(DATA.map(d => d[key]).filter(Boolean))].sort();
+}
+
+function buildTags(containerId, key, values) {
+  const wrap = document.getElementById(containerId);
+  values.forEach(v => {
+    const btn = document.createElement('button');
+    btn.className = 'tag';
+    btn.textContent = v;
+    btn.dataset.value = v;
+    btn.addEventListener('click', () => {
+      state[key] = state[key] === v ? '' : v;
+      renderTags();
+      renderCards();
+    });
+    wrap.appendChild(btn);
+  });
+}
+
+function renderTags() {
+  document.querySelectorAll('#filter-genre .tag').forEach(t =>
+    t.classList.toggle('active', t.dataset.value === state.genre));
+  document.querySelectorAll('#filter-structure .tag').forEach(t =>
+    t.classList.toggle('active', t.dataset.value === state.structure));
+  document.querySelectorAll('#filter-narrative .tag').forEach(t =>
+    t.classList.toggle('active', t.dataset.value === state.narrative));
+}
+
+//Card renderer
+function isRealUrl(url) {
+  return url && (url.startsWith('http://') || url.startsWith('https://'));
+}
+
+function getDomain(url) {
+  try { return new URL(url).hostname; } catch { return null; }
+}
+
+function createCard(d, i) {
+  const realUrl = isRealUrl(d.url);
+  const domain = realUrl ? getDomain(d.url) : null;
+  const imgNum = i + 1;
+
+  // Fallback colour derived from title
+  let hash = 0;
+  for (let c = 0; c < d.title.length; c++) hash = d.title.charCodeAt(c) + ((hash << 5) - hash);
+  const hue = Math.abs(hash) % 360;
+  const bg1 = `hsl(${hue},20%,88%)`;
+  const bg2 = `hsl(${hue},25%,78%)`;
+
+  const otherTags = d.otherGenres
+    ? d.otherGenres.split(',').map(g => g.trim()).filter(Boolean)
+    : [];
+
+  return `
+  <div class="card">
+    <div class="card-thumb">
+      <div class="thumb-placeholder" style="background:linear-gradient(135deg,${bg1},${bg2})">
+        <span>${escHtml(d.title.substring(0,60))}${d.title.length > 60 ? '…' : ''}</span>
+      </div>
+      <img
+        src="images/${imgNum}.jpg"
+        loading="lazy"
+        onload="this.classList.add('loaded')"
+        onerror="this.style.display='none'"
+        alt="${escHtml(d.title)}"
+      >
+      <span class="genre-badge">${escHtml(d.mainGenre)}</span>
+    </div>
+    <div class="card-body">
+      <div class="card-title">${escHtml(d.title)}</div>
+      <div class="card-meta">
+        ${otherTags.map(t => `<span class="meta-tag">${escHtml(t)}</span>`).join('')}
+        <span class="meta-tag structure">${escHtml(d.structure)}</span>
+        <span class="meta-tag narrative">${escHtml(d.narrative)}</span>
+      </div>
+      ${realUrl
+        ? `<a class="card-link" href="${escHtml(d.url)}" target="_blank" rel="noopener">Ver ↗</a>`
+        : `<span class="no-url">URL not available</span>`
+      }
+    </div>
+  </div>`;
+}
+
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+//Filter & render
+function filterData() {
+  const q = state.search.toLowerCase();
+  return DATA.filter(d => {
+    if (q && !d.title.toLowerCase().includes(q)) return false;
+    if (state.genre && d.mainGenre !== state.genre) return false;
+    if (state.structure && d.structure !== state.structure) return false;
+    if (state.narrative && d.narrative !== state.narrative) return false;
+    return true;
+  });
+}
+
+function renderCards() {
+  const filtered = filterData();
+  const grid = document.getElementById('grid');
+  document.getElementById('count-shown').textContent = filtered.length;
+
+  if (filtered.length === 0) {
+    grid.innerHTML = `<div class="empty"><h2>No results found</h2><p>Try clearing some filters.</p></div>`;
+    return;
+  }
+  grid.innerHTML = filtered.map((d, i) => createCard(d, DATA.indexOf(d))).join('');
+}
+
+//Init
+buildTags('filter-genre', 'genre', unique('mainGenre'));
+buildTags('filter-structure', 'structure', unique('structure'));
+buildTags('filter-narrative', 'narrative', unique('narrative'));
+
+document.getElementById('total-badge').textContent = `${DATA.length} sites`;
+document.getElementById('count-total').textContent = DATA.length;
+document.getElementById('footer-date').textContent = `Last updated: ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long'})}`;
+
+document.getElementById('search').addEventListener('input', e => {
+  state.search = e.target.value;
+  renderCards();
+});
+
+document.getElementById('reset-btn').addEventListener('click', () => {
+  state.search = ''; state.genre = ''; state.structure = ''; state.narrative = '';
+  document.getElementById('search').value = '';
+  renderTags();
+  renderCards();
+});
+
+renderCards();
+</script>
+</body>
+</html>
