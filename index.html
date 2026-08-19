@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -331,6 +331,23 @@
     color: var(--ink);
   }
 
+  .credits {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--ink-muted);
+  }
+  .credits-label {
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 10px;
+  }
   /* Footer */
   footer {
     border-top: 1px solid var(--border);
@@ -351,6 +368,7 @@
   @media (max-width: 420px) {
     .grid { grid-template-columns: 1fr; }
   }
+
 </style>
 </head>
 <body>
@@ -396,6 +414,13 @@
 <footer>
   <span>Narrative Visualization Browser &mdash; Interactive Survey</span>
   <span id="footer-date"></span>
+  <div class="credits">
+    <span class="credits-label">Criado por:</span>
+    <span>Amanda Flores Domeneghini</span>
+    <span>Artur Pinheiro de Souza</span>
+    <span>Leonardo Di Giorgio Leite</span>
+    <span>Mariana Nunes dos Santos</span>
+  </div>
 </footer>
 
 <script>
