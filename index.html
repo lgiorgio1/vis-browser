@@ -386,7 +386,7 @@
   </div>
 </header>
 
-<div class="controls">
+<div class="controls">  <!-- Classe de controles, novos filtros devem ser adicionados aqui-->
   <div class="search-wrap">
     <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
     <input type="search" id="search" placeholder="Buscar…" autocomplete="off">
@@ -434,6 +434,7 @@
 </footer>
 
 <script>
+//Array com todos os site cadastrados. Novas entradas devem ser adicionadas no final, respeitando estrutura e vírgulas.
 const DATA = [
   {"title":"Four Seasons","url":"https://www.go4trees.com/four-seasons/","mainGenre":"Slide Show","otherGenres":"Partitioned Poster","structure":"Multi-component","narrative":"Drill-Down Story","bias": "Não categorizado"},
   {"title":"How the Recession Reshaped the Economy, in 255 Charts","url":"https://www.nytimes.com/interactive/2014/06/05/upshot/how-the-recession-reshaped-the-economy-in-255-charts.html","mainGenre":"Slide Show","otherGenres":"Magazine Style","structure":"Multi-component","narrative":"Drill-Down Story","bias": "Não categorizado"},
@@ -549,14 +550,14 @@ const DATA = [
   {"title":"Love Songs","url":"https://pudding.cool/2024/11/love-songs/","mainGenre":"Slide Show","otherGenres":"Annotated Chart","structure":"Multi-component","narrative":"Interactive Slideshow","bias": "Não categorizado"}
 ];
 
-//State 
+//State - novas categorias de filtros devem ser declaradas no final dessa estrutura
 const state = { search: '', genre: '', structure: '', narrative: '', bias: '' };
 
-//filter options
+//lista categorias únicas para gerar botões
 function unique(key) {
   return [...new Set(DATA.map(d => d[key]).filter(Boolean))].sort();
 }
-
+//cria botões
 function buildTags(containerId, key, values) {
   const wrap = document.getElementById(containerId);
   values.forEach(v => {
@@ -573,6 +574,7 @@ function buildTags(containerId, key, values) {
   });
 }
 
+//animação de highlight no botão, novas categorias devem modificar aqui
 function renderTags() {
   document.querySelectorAll('#filter-genre .tag').forEach(t =>
     t.classList.toggle('active', t.dataset.value === state.genre));
@@ -585,7 +587,7 @@ function renderTags() {
 
 }
 
-//Card renderer
+//verifica se url é válida
 function isRealUrl(url) {
   return url && (url.startsWith('http://') || url.startsWith('https://'));
 }
@@ -593,13 +595,13 @@ function isRealUrl(url) {
 function getDomain(url) {
   try { return new URL(url).hostname; } catch { return null; }
 }
-
+//cria cards das visualizações com base no array DATA
 function createCard(d, i) {
   const realUrl = isRealUrl(d.url);
   const domain = realUrl ? getDomain(d.url) : null;
   const imgNum = i + 1;
 
-  // Fallback colour derived from title
+  // fundo placeholder caso não ache imagem
   let hash = 0;
   for (let c = 0; c < d.title.length; c++) hash = d.title.charCodeAt(c) + ((hash << 5) - hash);
   const hue = Math.abs(hash) % 360;
@@ -628,10 +630,11 @@ function createCard(d, i) {
     <div class="card-body">
       <div class="card-title">${escHtml(d.title)}</div>
       <div class="card-meta">
-        ${otherTags.map(t => `<span class="meta-tag">${escHtml(t)}</span>`).join('')}
+        ${otherTags.map(t => `<span class="meta-tag">${escHtml(t)}</span>`).join('')} 
         <span class="meta-tag structure">${escHtml(d.structure)}</span>
         <span class="meta-tag narrative">${escHtml(d.narrative)}</span>
         <span class="meta-tag bias">${escHtml(d.bias)}</span>
+        <!-- adicionar span aqui para novas categorias aparecerem no site -->
       </div>
       ${realUrl
         ? `<a class="card-link" href="${escHtml(d.url)}" target="_blank" rel="noopener">Ver ↗</a>`
@@ -640,12 +643,12 @@ function createCard(d, i) {
     </div>
   </div>`;
 }
-
+//segurança de caracteres
 function escHtml(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-//Filter & render
+//função de filtro, novas categorias devem ser adicionadas aqui
 function filterData() {
   const q = state.search.toLowerCase();
   return DATA.filter(d => {
@@ -658,6 +661,7 @@ function filterData() {
   });
 }
 
+//atualiza display atual de cards
 function renderCards() {
   const filtered = filterData();
   const grid = document.getElementById('grid');
@@ -671,6 +675,7 @@ function renderCards() {
 }
 
 //Init
+//adicionar novos filtros aqui para cria-los na página
 buildTags('filter-genre', 'genre', unique('mainGenre'));
 buildTags('filter-structure', 'structure', unique('structure'));
 buildTags('filter-narrative', 'narrative', unique('narrative'));
@@ -684,7 +689,7 @@ document.getElementById('search').addEventListener('input', e => {
   state.search = e.target.value;
   renderCards();
 });
-
+//event listener do reset, adicionar mudanças aqui
 document.getElementById('reset-btn').addEventListener('click', () => {
   state.search = ''; state.genre = ''; state.structure = ''; state.narrative = ''; state.bias = '';
   document.getElementById('search').value = '';
